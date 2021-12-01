@@ -6,8 +6,19 @@
 
 
 
-(defparameter +input+ (parse-lines #'identity))
+(defparameter +input+ (parse-lines #'parse-integer))
 
-(defun solve-part-1 ())
+(defun solve-part-1 ()
+  (loop :for (a b) :on +input+
+        :while b
+        :count (> b a)))
 
-(defun solve-part-2 ())
+(defun sliding-sums ()
+  (loop :for (a b c) :on +input+
+        :while c
+        :collect (+ a b c)))
+
+(defun solve-part-2 ()
+  (loop :for (a b) :on (sliding-sums)
+        :while b
+        :count (> b a)))
