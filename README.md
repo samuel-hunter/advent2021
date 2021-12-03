@@ -1,9 +1,9 @@
 # advent2021
-### _Your Name <your.name@example.com>_
 
-This is a project to do ... something.
+2021 Advent of Code submissions and input text
 
-## License
+## Follow along
 
-Specify license here
-
+- load+require `advent2021.asd` into your lisp image. This loads the utils but no solutions by default.
+- Load one of the days and enter its dedicated package
+- 👍

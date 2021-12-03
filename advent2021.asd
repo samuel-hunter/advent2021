@@ -1,9 +1,9 @@
 ;;;; advent2021.asd
 
 (asdf:defsystem #:advent2021
-  :description "Describe advent2021 here"
+  :description "Advent of Code 2021 submission collection and input text"
   :author "Samuel Hunter"
-  :license  "Specify license here"
+  :license  "Proprietary"
   :version "0.0.1"
   :depends-on (#:alexandria
                #:arrows

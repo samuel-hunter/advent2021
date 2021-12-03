@@ -1,3 +1,5 @@
+;;;; util.lisp
+
 (defpackage #:advent2021.util
   (:use #:cl #:alexandria #:arrows)
   (:export #:read-puzzle-sexp
