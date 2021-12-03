@@ -6,72 +6,70 @@
 
 
 
+;; Parse input into a list of simple bit-arrays.
 (defparameter +input+
   (parse-lines
     (lambda (line)
-      (loop :for c :across line
-            :collect (coerce (parse-integer (string c)) 'bit) :into bits
-            :finally (return (make-array (length line)
-                                         :element-type 'bit
-                                         :initial-contents bits))))))
+      (loop :with bit-map := (make-array (length line)
+                                         :element-type 'bit)
+            :for c :across line
+            :for biti :upfrom 0
+            :do (setf (sbit bit-map biti)
+                      (if (char= c #\1) 1 0))
+            :finally (return bit-map)))))
 
-(defparameter +bit-size+ 12)
+(defun push-bit (integer b)
+  "Shift integer by 1 bit and increment by b."
+  (+ (ash integer 1) b))
+
+(define-modify-macro pushf-bit (b) push-bit
+                     "Shift place by 1 bit and increment by b.")
 
 (defun bitmap->integer (bitmap)
   (loop :for i :below (length bitmap)
         :with n := 0
-        :do (setf n (+ (bit bitmap i)
-                       (ash n 1)))
-        :finally (Return n)))
+        :do (pushf-bit n (sbit bitmap i))
+        :finally (return n)))
 
-(defun count-bit (bit-maps biti)
-  (loop :for bit-map :in bit-maps
-        :count (zerop (bit bit-map biti)) :into zeroes
-        :count (= 1 (bit bit-map biti)) :into ones
-        :finally (return (if (> ones zeroes) 1 0))))
+(defun most-common-bit (bit-arrays biti)
+  (loop :for bit-array :in bit-arrays
+        :for zero? := (zerop (sbit bit-array biti))
+        :count zero? :into zeroes
+        :count (not zero?) :into ones
+        :finally (return (if (>= ones zeroes) 1 0))))
+
+(defun median-bit-array (bit-arrays)
+  "Return a bit-array with the most common bit of each place."
+  (loop :with bits := (length (first bit-arrays))
+        :with result := (make-array bits :element-type 'bit)
+        :for biti :below bits
+        :do (setf (sbit result biti)
+                  (most-common-bit bit-arrays biti))
+        :finally (return result)))
 
 (defun gamma-rate ()
-  (loop :for biti :below +bit-size+
-        :collect (count-bit +input+ biti) :into bits
-        :finally (Return (make-array +bit-size+ :element-type 'bit
-                                     :initial-contents bits))))
+  (bitmap->integer (median-bit-array +input+)))
 
-(defun gamma ()
-  (bitmap->integer (gamma-rate)))
-
-(defun epsilon ()
-  (bitmap->integer (bit-not (gamma-rate))))
+(defun epsilon-rate ()
+  (bitmap->integer (bit-not (median-bit-array +input+))))
 
 (defun solve-part-1 ()
-  (* (gamma) (epsilon)))
+  (* (gamma-rate) (epsilon-rate)))
 
-(defun filter-bitmaps (bitmaps criteria)
-  (loop :while (> (length bitmaps) 1)
+(defun sieve-bit-arrays (bit-arrays criteria)
+  (loop :while (> (length bit-arrays) 1)
         :for biti :upfrom 0
-        :do (setf bitmaps (remove-if-not (rcurry criteria biti bitmaps) bitmaps))
-        :finally (Return (first bitmaps))
-        ))
+        :for most-common-bit := (most-common-bit bit-arrays biti)
+        :do (setf bit-arrays
+                  (remove-if-not (rcurry criteria most-common-bit) bit-arrays
+                                 :key (rcurry #'sbit biti)))
+        :finally (return (first bit-arrays))))
 
-(defun most-common-bit (bit-maps biti)
-  (loop :for bit-map :in bit-maps
-        :count (zerop (bit bit-map biti)) :into zeroes
-        :count (= 1 (bit bit-map biti)) :into ones
-        :finally (return (cond
-                           ((> ones zeroes) 1)
-                           ((> zeroes ones) 0)))))
+(defun o2-gen-rating ()
+  (bitmap->integer (sieve-bit-arrays +input+ #'=)))
 
-(defun oxy-gen-test (bm biti cur-maps)
-  (= (bit bm biti) (or (most-common-bit cur-maps biti) 1))
-  )
-
-(defun oxy-generator ()
-  (bitmap->integer (filter-bitmaps +input+ #'oxy-gen-test)))
-
-(defun test-co2 (bm biti cur-maps)
-  (= (bit bm biti) (if (eql (most-common-bit cur-maps biti) 0) 1 0)))
-
-(defun co2 ()
-  (bitmap->integer (filter-bitmaps +input+ #'test-co2)))
+(defun co2-scrubber-rating ()
+  (bitmap->integer (sieve-bit-arrays +input+ (complement #'=))))
 
 (defun solve-part-2 ()
-  (* (oxy-generator) (co2)))
+  (* (o2-gen-rating) (co2-scrubber-rating)))
