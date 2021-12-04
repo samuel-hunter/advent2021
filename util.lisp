@@ -54,7 +54,7 @@ NAME, the file is determined based on the package name."
 
 (defun parse-forms (parser &optional name (prefix ".txt"))
   "Read each multiline form from the puzzle text, pass the list of
-lines to PARSER, and collect."
+   lines to PARSER, and collect."
   (with-puzzle-file (stream name prefix)
     (loop :with form := ()
           :for line := (read-line stream nil)
@@ -64,10 +64,10 @@ lines to PARSER, and collect."
             :and :do (setf form ())
           :else
             :do (push line form)
-          :finally (return (if form
-                               (append forms
-                                       (list (funcall parser (reverse form))))
-                               forms)))))
+            :finally (return
+                       (append forms
+                               (when form
+                                 (list (funcall parser (reverse form)))))))))
 
 (defun read-puzzle-grid (&optional name (prefix ".txt"))
   (loop :with lines := (parse-lines #'identity name prefix)
