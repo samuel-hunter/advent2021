@@ -65,8 +65,8 @@ lines to PARSER, and collect."
           :else
             :do (push line form)
           :finally (return (if form
-                               (cons (funcall parser (reverse form))
-                                     forms)
+                               (append forms
+                                       (list (funcall parser (reverse form))))
                                forms)))))
 
 (defun read-puzzle-grid (&optional name (prefix ".txt"))
