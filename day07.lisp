@@ -16,39 +16,26 @@
                        (incf (aref array x))
                    :finally (return array))))))
 
-(defun fuel (dest)
+(defun fuel-required (dest function)
   (loop :for n :across +input+
         :for x :upfrom 0
-        :sum (* n (abs (- x dest)))))
+        :for distance := (abs (- x dest))
+        :sum (* n (funcall function distance))))
 
-(defun fuel2 (dest)
-  (loop :for n :across +input+
-        :for x :upfrom 0
-        :for dist := (abs (- x dest))
-        :for fuel-per := (abs (/ (* dist (1+ dist)) 2))
-        :sum (* n fuel-per)))
+(defun solve (function)
+  (loop :with winner := nil
+        :with lowest-score := nil
+        :initially (setf winner 0
+                         lowest-score (fuel-required 0 function))
+        :for dest :from 1 :below (length +input+)
+        :for fuel := (fuel-required dest function)
+        :do (when (< fuel lowest-score)
+              (setf winner dest
+                    lowest-score fuel))
+        :finally (return lowest-score)))
 
 (defun solve-part-1 ()
-  (loop :with winner := -1
-        :with score := 99999999999
-        :for i :below (length +input+)
-        :for fuel := (fuel i)
-        :do (print (list :x i '= fuel))
-        :do (when (<= fuel score)
-              (setf score fuel
-                    winner i))
-        :finally (return score)))
+  (solve #'identity))
 
 (defun solve-part-2 ()
-  (loop :with winner := -1
-        :with score := 99999999999
-        :for i :below (length +input+)
-        :for fuel := (fuel2 i)
-        :do (print (list :x i '= fuel))
-        :do (when (<= fuel score)
-              (setf score fuel
-                    winner i))
-        :finally (return (list i score))))
-
-(defun solve-part-2 ()
-  )
+  (solve (lambda (x) (* x (1+ x) 1/2))))
