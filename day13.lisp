@@ -6,20 +6,41 @@
 
 
 
+(defun make-paper (width height)
+  (make-array (list height width) :element-type 'bit))
+
+(defun dot (paper x y)
+  (destructuring-bind (height width) (array-dimensions paper)
+    (if (and (< x width)
+             (< y height))
+        (aref paper y x)
+        0)))
+
+(defun (setf dot) (new-value paper x y)
+  (setf (aref paper y x) new-value))
+
+(defun parse-dot (line)
+  (mapcar #'parse-integer (split "," line)))
+
+(defun read-dimensions (stream)
+  (loop :with old-position := (file-position stream)
+        :for line := (read-line stream)
+        :until (string= line "")
+        :for (x y) := (parse-dot line)
+        :maximize x :into max-x
+        :maximize y :into max-y
+        :finally (progn
+                   (file-position stream old-position)
+                   (return (list (1+ max-x) (1+ max-y))))))
+
 (with-puzzle-file (stream)
   (defparameter +paper+
-    (loop :with paper := (make-array '(0 0)
-                                     :element-type 'bit
-                                     :adjustable t)
+    (loop :with (width height) := (read-dimensions stream)
+          :with paper := (make-paper width height)
           :for line := (read-line stream)
           :until (string= line "")
-          :for (x y) := (mapcar #'parse-integer
-                           (split "," line))
-          :for (height width) := (array-dimensions paper)
-          :do (progn
-                (adjust-array paper (list (max height (1+ y))
-                                          (max width (1+ x))))
-                (setf (aref paper y x) 1))
+          :for (x y) := (parse-dot line)
+          :do (setf (dot paper x y) 1)
           :finally (return paper)))
 
   (defparameter +folds+
@@ -30,59 +51,56 @@
           :collect (list (intern (string-upcase pos) :keyword)
                          (parse-integer n)))))
 
-(defun fold-x (paper axis)
-  (loop :with (height width) := (array-dimensions paper)
-        :with new-paper := (make-array (list height axis)
-                                       :element-type 'bit)
+(defun fold-x (paper new-width)
+  (loop :with height := (array-dimension paper 0)
+        :with new-paper := (make-paper new-width height)
+
         :for y :below height
-        :do (loop :for x :below axis
-                  :for reflected-x := (+ axis (- axis x))
-
+        :do (loop :for x :below new-width
+                  :for reflected-x := (+ new-width new-width (- x))
                   :do (setf (aref new-paper y x)
-                            (logior (aref paper y x)
-                                    (if (< reflected-x width)
-                                        (aref paper y (+ axis (- axis x)))
-                                        0
-                                        ))))
+                            (logior (dot paper x y)
+                                    (dot paper reflected-x y))))
         :finally (return new-paper)))
 
-(defun fold-y (paper axis)
-  (loop :with (height width) := (array-dimensions paper)
-        :with new-paper := (make-array (list axis width)
-                                       :element-type 'bit)
-        :for y :below axis
-        :for reflected-y := (+ axis (- axis y))
+(defun fold-y (paper new-height)
+  (loop :with width := (array-dimension paper 1)
+        :with new-paper := (make-paper width new-height)
+
+        :for y :below new-height
+        :for reflected-y := (+ new-height new-height (- y))
         :do (loop :for x :below width
-                  :do (setf (aref new-paper y x)
-                            (logior (aref paper y x)
-                                    (if (< reflected-y height)
-                                        (aref paper reflected-y x)
-                                        0))))
+                  :do (setf (dot new-paper x y)
+                            (logior (dot paper x y)
+                                    (dot paper x reflected-y))))
         :finally (return new-paper)))
+
+(defun fold (paper axis dimension)
+  (ecase axis
+    (:x (fold-x paper dimension))
+    (:y (fold-y paper dimension))))
 
 (defun solve-part-1 ()
-  (loop :with paper := (fold-x +paper+ 655)
+  (loop :with (axis dimension) := (first +folds+)
+        :with paper := (fold +paper+ axis dimension)
         :with (height width) := (array-dimensions paper)
+
         :for y :below height
         :sum (loop :for x :below width
-                   :sum (aref paper y x))))
+                   :sum (dot paper x y))))
 
-(defun print-pape (paper)
+(defun print-paper (paper)
   (loop :with (height width) := (array-dimensions paper)
         :for y :below height
         :do (loop :for x :below width
                   :for val := (aref paper y x)
-                  :do (write-char (if (= val 1)
-                                      #\X
-                                      #\Space)))
-        (terpri)))
+                  :do (write-char (if (= val 1) #\X #\Space)))
+            (terpri)))
 
 (defun solve-part-2 ()
   (loop :with paper := +paper+
-        :for (basis axis) :in +folds+
-        :do (setf paper
-                  (ecase basis
-                    (:x (fold-x paper axis))
-                    (:y (fold-y paper axis))))
-        :finally (print paper)))
+        :for (axis dimension) :in +folds+
+        :do (setf paper (fold paper axis dimension))
+        :finally (print-paper paper))
+  (values))
 
