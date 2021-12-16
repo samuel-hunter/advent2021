@@ -9,6 +9,7 @@
                #:arrows
                #:cl-ppcre
                #:memoize
+               #:queues.priority-queue
                #:split-sequence)
   :serial t
   :components ((:file "util")))
